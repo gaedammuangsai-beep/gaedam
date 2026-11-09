@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>GAEDAM แกะดำ</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f6efe3;
+       font-family:-apple-system,"Noto Sans Thai",Tahoma,sans-serif;color:#2b2118}
+  .box{background:#fff;border-radius:16px;padding:28px 26px;max-width:380px;width:88%;text-align:center;
+       box-shadow:0 2px 10px rgba(43,33,24,.08);border-top:4px solid #8B0000}
+  h1{font-size:1.25rem;margin:0 0 8px;color:#8B0000}
+  p{margin:6px 0;color:#6b5d50;font-size:.95rem}
+  .spin{width:34px;height:34px;border:4px solid #eadfcd;border-top-color:#8B0000;border-radius:50%;margin:14px auto;animation:s 1s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  a.btn{display:inline-block;margin-top:12px;padding:9px 18px;border-radius:10px;background:#8B0000;color:#fff;text-decoration:none}
+  small{color:#a0948a}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>GAEDAM แกะดำ</h1>
+  <div class="spin" id="spin"></div>
+  <p id="msg">กำลังเปิดระบบ…</p>
+  <p id="extra"></p>
+  <small id="when"></small>
+</div>
+<script>
+var API = "https://api.github.com/repos/gaedammuangsai-beep/gaedam/contents/url.json?ref=main";
+var RETRY_SEC = 20;
+function setMsg(t, extra) { document.getElementById('msg').textContent = t; document.getElementById('extra').innerHTML = extra || ''; }
+function getUrl() {
+  return fetch(API + '&t=' + Date.now(), { headers: { 'Accept': 'application/vnd.github.raw+json' }, cache: 'no-store' })
+    .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
+    .catch(function () {
+      return fetch('url.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); });
+    });
+}
+function alive(url) {
+  var ctrl = window.AbortController ? new AbortController() : null;
+  var t = setTimeout(function () { if (ctrl) { ctrl.abort(); } }, 8000);
+  // /cf-ping ของระบบตอบ "GAEDAM-OK ..." (อนุญาต CORS) — หน้า error ของ Cloudflare (530/1033) จะไม่ผ่าน
+  return fetch(url + '/cf-ping?t=' + Date.now(), { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
+    .then(function (r) { return r.ok ? r.text() : ''; })
+    .then(function (txt) { clearTimeout(t); return txt.indexOf('GAEDAM-OK') === 0; })
+    .catch(function () { clearTimeout(t); return false; });
+}
+function go() {
+  setMsg('กำลังเปิดระบบ…');
+  getUrl().then(function (j) {
+    var url = (j && j.url ? String(j.url) : '').replace(/\/+$/, '');
+    if (!/^https:\/\/[a-z0-9.-]+$/i.test(url)) { throw new Error('no url'); }
+    if (j.updated) { document.getElementById('when').textContent = 'อัปเดตลิงก์ล่าสุด ' + new Date(j.updated).toLocaleString('th-TH'); }
+    return alive(url).then(function (ok) {
+      if (ok) { location.replace(url + '/'); return; }
+      wait('ระบบกำลังเปลี่ยนลิงก์ใหม่ หรือเครื่อง Server ยังไม่พร้อม', url);
+    });
+  }).catch(function () { wait('ยังหาลิงก์ของระบบไม่เจอ'); });
+}
+function wait(text, url) {
+  var left = RETRY_SEC;
+  var extra = url ? '<a class="btn" href="' + url + '/">ลองเปิดลิงก์ล่าสุด</a>' : '';
+  (function tick() {
+    setMsg(text + ' — ลองใหม่ใน ' + left + ' วินาที', extra);
+    if (left-- <= 0) { go(); } else { setTimeout(tick, 1000); }
+  })();
+}
+go();
+</script>
+</body>
+</html>
