@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="แกะดำ">
 <title>GAEDAM แกะดำ</title>
 <style>
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f6efe3;
@@ -29,13 +30,15 @@
 </div>
 <script>
 var API = "https://api.github.com/repos/gaedammuangsai-beep/gaedam/contents/url.json?ref=main";
+var TARGET = "/";
+var FALLBACK = "url.json";
 var RETRY_SEC = 20;
 function setMsg(t, extra) { document.getElementById('msg').textContent = t; document.getElementById('extra').innerHTML = extra || ''; }
 function getUrl() {
   return fetch(API + '&t=' + Date.now(), { headers: { 'Accept': 'application/vnd.github.raw+json' }, cache: 'no-store' })
     .then(function (r) { if (!r.ok) { throw new Error(r.status); } return r.json(); })
     .catch(function () {
-      return fetch('url.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); });
+      return fetch(FALLBACK + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); });
     });
 }
 function alive(url) {
@@ -54,14 +57,14 @@ function go() {
     if (!/^https:\/\/[a-z0-9.-]+$/i.test(url)) { throw new Error('no url'); }
     if (j.updated) { document.getElementById('when').textContent = 'อัปเดตลิงก์ล่าสุด ' + new Date(j.updated).toLocaleString('th-TH'); }
     return alive(url).then(function (ok) {
-      if (ok) { location.replace(url + '/'); return; }
+      if (ok) { location.replace(url + TARGET); return; }
       wait('ระบบกำลังเปลี่ยนลิงก์ใหม่ หรือเครื่อง Server ยังไม่พร้อม', url);
     });
   }).catch(function () { wait('ยังหาลิงก์ของระบบไม่เจอ'); });
 }
 function wait(text, url) {
   var left = RETRY_SEC;
-  var extra = url ? '<a class="btn" href="' + url + '/">ลองเปิดลิงก์ล่าสุด</a>' : '';
+  var extra = url ? '<a class="btn" href="' + url + TARGET + '">ลองเปิดลิงก์ล่าสุด</a>' : '';
   (function tick() {
     setMsg(text + ' — ลองใหม่ใน ' + left + ' วินาที', extra);
     if (left-- <= 0) { go(); } else { setTimeout(tick, 1000); }
